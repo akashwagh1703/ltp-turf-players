@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "LTP Player",
+    "slug": "ltp-turf-players",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#3B82F6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ltp.player"
+    },
+    "android": {
+      "package": "com.ltp.player"
+    }
+  }
+}
