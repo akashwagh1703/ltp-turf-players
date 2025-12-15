@@ -21,6 +21,7 @@ export const turfService = {
 export const slotService = {
   getAvailableSlots: (turfId, date) => 
     api.get(API_ENDPOINTS.GET_AVAILABLE_SLOTS, { params: { turf_id: turfId, date } }),
+  generateSlots: (data) => api.post('/slots/generate', data),
 };
 
 // Booking Services

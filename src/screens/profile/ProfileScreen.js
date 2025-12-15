@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { COLORS, SIZES, FONTS } from '../../constants/theme';
+import { COLORS, SIZES, FONTS, SHADOWS } from '../../constants/theme';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -16,36 +16,59 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const menuItems = [
+    { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6' },
+    { icon: 'star-outline', label: 'My Reviews', color: '#F59E0B' },
+    { icon: 'notifications-outline', label: 'Notifications', color: '#8B5CF6' },
+    { icon: 'help-circle-outline', label: 'Help & Support', color: '#10B981' },
+    { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#64748B' },
+    { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: '#64748B' },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#10B981', '#059669']} style={styles.header}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{(user?.name || 'U')[0].toUpperCase()}</Text>
+          </View>
+          <Text style={styles.userName}>{user?.name || 'User'}</Text>
+          <Text style={styles.userPhone}>{user?.phone}</Text>
+          {user?.email && <Text style={styles.userEmail}>{user.email}</Text>}
+        </LinearGradient>
 
-      <View style={styles.content}>
-        <Card style={styles.profileCard}>
-          <Text style={styles.name}>{user?.name || 'User'}</Text>
-          <Text style={styles.phone}>{user?.phone}</Text>
-          <Text style={styles.email}>{user?.email || 'No email'}</Text>
-        </Card>
+        <View style={styles.content}>
+          <View style={styles.menuCard}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.menuItem,
+                  index !== menuItems.length - 1 && styles.menuItemBorder
+                ]}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconCircle, { backgroundColor: `${item.color}15` }]}>
+                  <Ionicons name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.menuText}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={20} color={COLORS.textLight} />
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Card style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>Edit Profile</Text>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>My Reviews</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>Notifications</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>Help & Support</Text>
-          </TouchableOpacity>
-        </Card>
 
-        <Button title="Logout" variant="secondary" onPress={handleLogout} />
-      </View>
+          <Text style={styles.version}>Version 1.0.0</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -56,43 +79,96 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: SIZES.lg,
+    paddingTop: SIZES.xl,
+    paddingBottom: SIZES.xxl,
+    paddingHorizontal: SIZES.xl,
+    alignItems: 'center',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  title: {
-    ...FONTS.h1,
-    color: COLORS.text,
-  },
-  content: {
-    padding: SIZES.lg,
-  },
-  profileCard: {
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SIZES.lg,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
-  name: {
-    ...FONTS.h2,
-    color: COLORS.text,
+  avatarText: {
+    fontSize: 40,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
     marginBottom: SIZES.xs,
   },
-  phone: {
-    ...FONTS.body,
-    color: COLORS.textSecondary,
+  userPhone: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
     marginBottom: SIZES.xs,
   },
-  email: {
-    ...FONTS.caption,
-    color: COLORS.textSecondary,
+  userEmail: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  content: {
+    padding: SIZES.xl,
   },
   menuCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radiusLg,
     marginBottom: SIZES.lg,
+    ...SHADOWS.medium,
   },
   menuItem: {
-    paddingVertical: SIZES.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SIZES.lg,
+    gap: SIZES.md,
+  },
+  menuItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  menuIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   menuText: {
-    ...FONTS.body,
+    fontSize: 16,
     color: COLORS.text,
+    flex: 1,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SIZES.md,
+    backgroundColor: COLORS.card,
+    padding: SIZES.lg,
+    borderRadius: SIZES.radiusLg,
+    borderWidth: 1,
+    borderColor: COLORS.errorLight,
+    marginBottom: SIZES.xl,
+    ...SHADOWS.small,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.error,
+  },
+  version: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    textAlign: 'center',
   },
 });

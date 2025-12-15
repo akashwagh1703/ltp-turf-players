@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Card from '../../components/common/Card';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/common/Button';
 import { bookingService } from '../../services/bookingService';
-import { COLORS, SIZES, FONTS } from '../../constants/theme';
+import { COLORS, SIZES, FONTS, SHADOWS } from '../../constants/theme';
 
 export default function BookingsScreen() {
   const [bookings, setBookings] = useState([]);
@@ -36,36 +37,77 @@ export default function BookingsScreen() {
     }
   };
 
-  const renderBooking = ({ item }) => (
-    <Card style={styles.bookingCard}>
-      <View style={styles.bookingHeader}>
-        <Text style={styles.bookingId}>#{item.id}</Text>
-        <Text style={[styles.status, styles[item.booking_status]]}>{item.booking_status}</Text>
-      </View>
-      <Text style={styles.turfName}>{item.turf?.name || 'Turf'}</Text>
-      <Text style={styles.bookingDate}>{item.booking_date} • {item.start_time} - {item.end_time}</Text>
-      <View style={styles.bookingFooter}>
-        <Text style={styles.amount}>₹{item.amount}</Text>
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed': return { bg: '#E0E7FF', text: '#4338CA' };
+      case 'completed': return { bg: '#D1FAE5', text: '#047857' };
+      case 'cancelled': return { bg: '#FEE2E2', text: '#DC2626' };
+      default: return { bg: '#F1F5F9', text: '#64748B' };
+    }
+  };
+
+  const renderBooking = ({ item }) => {
+    const statusColor = getStatusColor(item.booking_status);
+    return (
+      <View style={styles.bookingCard}>
+        <View style={styles.bookingHeader}>
+          <View style={styles.bookingIconCircle}>
+            <Ionicons name="football" size={20} color={COLORS.primary} />
+          </View>
+          <View style={styles.bookingHeaderContent}>
+            <Text style={styles.turfName}>{item.turf?.name || 'Turf'}</Text>
+            <Text style={styles.bookingId}>#{item.booking_number || item.id}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+            <Text style={[styles.statusText, { color: statusColor.text }]}>{item.booking_status}</Text>
+          </View>
+        </View>
+
+        <View style={styles.bookingDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>{item.booking_date}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>
+              {item.start_time} - {item.end_time}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="wallet-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.detailText}>₹{item.final_amount || item.amount}</Text>
+          </View>
+        </View>
+
         {item.booking_status === 'confirmed' && (
-          <Button
-            title="Cancel"
-            variant="secondary"
-            onPress={() => handleCancel(item.id)}
-            style={styles.cancelButton}
-          />
+          <View style={styles.bookingFooter}>
+            <Button
+              title="Cancel Booking"
+              variant="secondary"
+              onPress={() => handleCancel(item.id)}
+              style={styles.cancelButton}
+            />
+          </View>
         )}
       </View>
-    </Card>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Bookings</Text>
-      </View>
+      <LinearGradient colors={['#10B981', '#059669']} style={styles.header}>
+        <Text style={styles.headerTitle}>My Bookings</Text>
+        <Text style={styles.headerSubtitle}>Track all your turf bookings</Text>
+      </LinearGradient>
+
       {bookings.length === 0 && !loading ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No bookings yet</Text>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="calendar-outline" size={60} color={COLORS.textLight} />
+          </View>
+          <Text style={styles.emptyTitle}>No Bookings Yet</Text>
+          <Text style={styles.emptyText}>Start booking your favorite turfs now!</Text>
         </View>
       ) : (
         <FlatList
@@ -74,6 +116,7 @@ export default function BookingsScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} />}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </SafeAreaView>
@@ -86,80 +129,114 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: SIZES.lg,
+    paddingTop: SIZES.lg,
+    paddingBottom: SIZES.xl,
+    paddingHorizontal: SIZES.xl,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
-  title: {
-    ...FONTS.h1,
-    color: COLORS.text,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: SIZES.xs,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   list: {
-    padding: SIZES.lg,
+    padding: SIZES.xl,
   },
   bookingCard: {
-    marginBottom: SIZES.md,
+    backgroundColor: COLORS.card,
+    borderRadius: SIZES.radiusLg,
+    padding: SIZES.lg,
+    marginBottom: SIZES.lg,
+    ...SHADOWS.medium,
   },
   bookingHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SIZES.xs,
+    marginBottom: SIZES.lg,
+    gap: SIZES.md,
   },
-  bookingId: {
-    ...FONTS.caption,
-    color: COLORS.textSecondary,
+  bookingIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  status: {
-    ...FONTS.small,
-    paddingHorizontal: SIZES.sm,
-    paddingVertical: SIZES.xs,
-    borderRadius: SIZES.xs,
-    textTransform: 'capitalize',
-  },
-  confirmed: {
-    backgroundColor: '#DBEAFE',
-    color: '#1E40AF',
-  },
-  completed: {
-    backgroundColor: '#D1FAE5',
-    color: '#065F46',
-  },
-  cancelled: {
-    backgroundColor: '#FEE2E2',
-    color: '#991B1B',
+  bookingHeaderContent: {
+    flex: 1,
   },
   turfName: {
-    ...FONTS.body,
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: SIZES.xs,
+    marginBottom: 2,
   },
-  bookingDate: {
-    ...FONTS.caption,
+  bookingId: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+  },
+  statusBadge: {
+    paddingHorizontal: SIZES.md,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 10,
+    textTransform: 'capitalize',
+    fontWeight: '600',
+  },
+  bookingDetails: {
+    gap: SIZES.sm,
+    marginBottom: SIZES.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SIZES.sm,
+  },
+  detailText: {
+    fontSize: 14,
     color: COLORS.text,
-    marginBottom: SIZES.sm,
   },
   bookingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  amount: {
-    ...FONTS.body,
-    fontWeight: '600',
-    color: COLORS.primary,
+    paddingTop: SIZES.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   cancelButton: {
-    paddingVertical: SIZES.xs,
-    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SIZES.xl,
+    padding: SIZES.xxl,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.xl,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SIZES.sm,
   },
   emptyText: {
-    ...FONTS.body,
+    fontSize: 14,
     color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });

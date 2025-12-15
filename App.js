@@ -14,5 +14,7 @@ export default function App() {
         </NavigationContainer>
       </AuthProvider>
     </SafeAreaProvider>
+
+    
   );
 }

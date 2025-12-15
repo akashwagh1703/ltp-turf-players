@@ -36,6 +36,11 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  const updateUser = async (updatedUser) => {
+    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -48,6 +53,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isProfileComplete = () => {
+    return user && user.name && user.name.trim() !== '';
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -57,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isProfileComplete }}>
       {children}
     </AuthContext.Provider>
   );

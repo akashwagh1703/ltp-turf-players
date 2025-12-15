@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const api = axios.create({
-  baseURL: 'http://10.10.16.254:8000/api/v1/player',
+  baseURL: 'http://35.222.74.225/api/v1/player',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,6 +23,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.log('✅ API Response:', response.config.method.toUpperCase(), response.config.url, response.status, response.data);
+    if (!response.data && response.status === 200) {
+      response.data = { data: [] };
+    }
     return response;
   },
   async (error) => {

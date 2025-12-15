@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Card from '../../components/common/Card';
+import { LinearGradient } from 'expo-linear-gradient';
 import Button from '../../components/common/Button';
 import { slotService, bookingService } from '../../services/apiService';
-import { COLORS, SIZES, FONTS } from '../../constants/theme';
+import { COLORS, SIZES, FONTS, SHADOWS } from '../../constants/theme';
 
 export default function BookTurfScreen({ route, navigation }) {
   const { turfId, turfName } = route.params;
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [slots, setSlots] = useState([]);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,31 +19,42 @@ export default function BookTurfScreen({ route, navigation }) {
     loadSlots();
   }, [date]);
 
-  const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatTime = (time) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
+  const formatDate = (date) => date.toISOString().split('T')[0];
 
   const handleDateSelect = (days) => {
     const newDate = new Date();
     newDate.setDate(newDate.getDate() + days);
     setDate(newDate);
     setSelectedSlots([]);
-    setShowDatePicker(false);
   };
 
   const loadSlots = async () => {
     setLoading(true);
+    setSelectedSlots([]);
     try {
       const response = await slotService.getAvailableSlots(turfId, formatDate(date));
-      setSlots(Array.isArray(response.data) ? response.data : []);
+      let slotsData = Array.isArray(response.data) ? response.data : [];
+      
+      if (slotsData.length === 0) {
+        try {
+          await slotService.generateSlots({ turf_id: turfId, date: formatDate(date) });
+          const newResponse = await slotService.getAvailableSlots(turfId, formatDate(date));
+          slotsData = Array.isArray(newResponse.data) ? newResponse.data : [];
+        } catch (genError) {
+          console.error('Slot generation error:', genError);
+        }
+      }
+      
+      const processedSlots = slotsData.map(slot => ({
+        ...slot,
+        is_booked: slot.is_booked || 
+                   slot.status === 'booked_online' || 
+                   slot.status === 'booked_offline' ||
+                   (slot.booking && ['confirmed', 'completed'].includes(slot.booking.booking_status))
+      }));
+      
+      processedSlots.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+      setSlots(processedSlots);
     } catch (error) {
       console.error('Load slots error:', error);
       Alert.alert('Error', 'Failed to load slots');
@@ -54,8 +64,8 @@ export default function BookTurfScreen({ route, navigation }) {
   };
 
   const toggleSlot = (slot) => {
-    if (slot.status !== 'available') {
-      Alert.alert('Not Available', 'This time slot is not available.');
+    if (slot.is_booked) {
+      Alert.alert('Not Available', 'This time slot is already booked.');
       return;
     }
     
@@ -64,12 +74,11 @@ export default function BookTurfScreen({ route, navigation }) {
       setSelectedSlots(selectedSlots.filter(s => s.id !== slot.id));
     } else {
       const newSelection = [...selectedSlots, slot].sort((a, b) => 
-        new Date(`2000-01-01 ${a.start_time}`) - new Date(`2000-01-01 ${b.start_time}`)
-      );
+        new Date(`2000-01-01 ${a.start_time}`) - new Date(`2000-01-01 ${b.start_time}`));
       if (isContinuous(newSelection)) {
         setSelectedSlots(newSelection);
       } else {
-        Alert.alert('Error', 'Please select continuous time slots.');
+        Alert.alert('Error', 'Please select consecutive time slots only.');
       }
     }
   };
@@ -80,32 +89,6 @@ export default function BookTurfScreen({ route, navigation }) {
       if (slots[i].start_time !== slots[i - 1].end_time) return false;
     }
     return true;
-  };
-
-  const isSlotSelectable = (slot) => {
-    if (slot.status !== 'available') return false;
-    if (selectedSlots.length === 0) return true;
-    const testSelection = [...selectedSlots, slot].sort((a, b) => 
-      new Date(`2000-01-01 ${a.start_time}`) - new Date(`2000-01-01 ${b.start_time}`)
-    );
-    return isContinuous(testSelection);
-  };
-
-  const getSlotStyle = (slot, isSelected, isDisabled) => {
-    if (isSelected) return styles.selectedSlot;
-    if (slot.status === 'booked_online') return styles.bookedOnlineSlot;
-    if (slot.status === 'booked_offline') return styles.bookedOfflineSlot;
-    if (slot.status === 'blocked') return styles.blockedSlot;
-    if (isDisabled) return styles.unavailableSlot;
-    return null;
-  };
-
-  const getStatusText = (slot, isDisabled) => {
-    if (slot.status === 'available') return isDisabled ? 'Not continuous' : 'Available';
-    if (slot.status === 'booked_online') return 'Booked';
-    if (slot.status === 'booked_offline') return 'Booked Offline';
-    if (slot.status === 'blocked') return 'Blocked';
-    return slot.status;
   };
 
   const getTotalAmount = () => {
@@ -120,8 +103,9 @@ export default function BookTurfScreen({ route, navigation }) {
     setBooking(true);
     try {
       const slotIds = selectedSlots.map(s => s.id);
-      await bookingService.createBooking(slotIds);
-      Alert.alert('Success', 'Booking created successfully', [
+      const response = await bookingService.createBooking(slotIds);
+      
+      Alert.alert('Success', 'Booking created successfully!', [
         { text: 'OK', onPress: () => navigation.navigate('Main', { screen: 'Bookings' }) }
       ]);
     } catch (error) {
@@ -132,80 +116,147 @@ export default function BookTurfScreen({ route, navigation }) {
     }
   };
 
+  const dateOptions = [
+    { label: 'Today', days: 0 },
+    { label: 'Tomorrow', days: 1 },
+    { label: 'Day After', days: 2 },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book {turfName}</Text>
-      </View>
-
-      <ScrollView>
-        <Card style={styles.dateCard}>
-          <Text style={styles.label}>Select Date</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.dateText}>{date.toDateString()}</Text>
+      <LinearGradient colors={['#10B981', '#059669']} style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-        </Card>
+          <Text style={styles.headerTitle}>Book Turf</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <Text style={styles.turfName}>{turfName}</Text>
+      </LinearGradient>
 
-        <Modal visible={showDatePicker} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.datePickerModal}>
-              <Text style={styles.modalTitle}>Select Date</Text>
-              <TouchableOpacity style={styles.dateOption} onPress={() => handleDateSelect(0)}>
-                <Text style={styles.dateOptionText}>Today</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.dateSection}>
+          <Text style={styles.sectionLabel}>Select Date</Text>
+          <View style={styles.dateButtons}>
+            {dateOptions.map((option) => (
+              <TouchableOpacity
+                key={option.days}
+                style={[
+                  styles.dateButton,
+                  date.toDateString() === new Date(Date.now() + option.days * 86400000).toDateString() && styles.dateButtonActive
+                ]}
+                onPress={() => handleDateSelect(option.days)}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.dateButtonText,
+                  date.toDateString() === new Date(Date.now() + option.days * 86400000).toDateString() && styles.dateButtonTextActive
+                ]}>
+                  {option.label}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.dateOption} onPress={() => handleDateSelect(1)}>
-                <Text style={styles.dateOptionText}>Tomorrow</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dateOption} onPress={() => handleDateSelect(2)}>
-                <Text style={styles.dateOptionText}>Day After Tomorrow</Text>
-              </TouchableOpacity>
-              <Button title="Cancel" variant="secondary" onPress={() => setShowDatePicker(false)} />
-            </View>
+            ))}
           </View>
-        </Modal>
+        </View>
 
-        <View style={styles.slotsContainer}>
-          <Text style={styles.sectionTitle}>Available Slots</Text>
+        <View style={styles.slotsSection}>
+          <Text style={styles.sectionLabel}>Available Time Slots</Text>
           {loading ? (
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
           ) : slots.length === 0 ? (
-            <Text style={styles.noSlots}>No slots available</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons name="time-outline" size={48} color={COLORS.textLight} />
+              <Text style={styles.emptyText}>No slots available for this date</Text>
+            </View>
           ) : (
-            slots.map((slot) => {
-              const isSelected = selectedSlots.some(s => s.id === slot.id);
-              const isDisabled = !isSlotSelectable(slot) && !isSelected;
-              return (
-                <TouchableOpacity
-                  key={slot.id}
-                  onPress={() => toggleSlot(slot)}
-                >
-                  <Card style={[
-                    styles.slotCard,
-                    getSlotStyle(slot, isSelected, isDisabled)
-                  ]}>
-                    <Text style={styles.slotTime}>{formatTime(slot.start_time)} - {formatTime(slot.end_time)}</Text>
-                    <Text style={styles.slotPrice}>₹{slot.price}</Text>
-                    <Text style={styles.slotStatus}>
-                      {getStatusText(slot, isDisabled)}
-                    </Text>
-                  </Card>
-                </TouchableOpacity>
-              );
-            })
+            <View style={styles.slotsGrid}>
+              {slots.map((slot) => {
+                const isSelected = selectedSlots.some(s => s.id === slot.id);
+                const isBooked = slot.is_booked;
+                return (
+                  <TouchableOpacity
+                    key={slot.id}
+                    style={[
+                      styles.slotCard,
+                      isSelected && styles.slotCardSelected,
+                      isBooked && styles.slotCardBooked
+                    ]}
+                    onPress={() => toggleSlot(slot)}
+                    disabled={isBooked}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.slotTime}>
+                      <Ionicons 
+                        name={isBooked ? "lock-closed" : isSelected ? "checkmark-circle" : "time-outline"} 
+                        size={16} 
+                        color={isBooked ? COLORS.textLight : isSelected ? COLORS.primary : COLORS.textSecondary} 
+                      />
+                      <Text style={[
+                        styles.slotTimeText,
+                        isSelected && styles.slotTimeTextSelected,
+                        isBooked && styles.slotTimeTextBooked
+                      ]}>
+                        {slot.start_time_display || slot.start_time}
+                      </Text>
+                    </View>
+                    {isBooked ? (
+                      <View style={styles.bookedInfo}>
+                        <Text style={styles.bookedBadge}>BOOKED</Text>
+                        {slot.booking && slot.booking.player_name && (
+                          <Text style={styles.bookedBy}>{slot.booking.player_name}</Text>
+                        )}
+                      </View>
+                    ) : (
+                      <Text style={[
+                        styles.slotPrice,
+                        isSelected && styles.slotPriceSelected
+                      ]}>
+                        ₹{slot.price}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           )}
         </View>
+
+        {selectedSlots.length > 0 && (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Booking Summary</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Selected Slots</Text>
+              <Text style={styles.summaryValue}>{selectedSlots.length}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Time</Text>
+              <Text style={styles.summaryValue}>
+                {selectedSlots[0]?.start_time_display} - {selectedSlots[selectedSlots.length - 1]?.end_time_display}
+              </Text>
+            </View>
+            <View style={[styles.summaryRow, styles.summaryTotal]}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalAmount}>₹{getTotalAmount()}</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {selectedSlots.length > 0 && (
         <View style={styles.footer}>
-          <View>
-            <Text style={styles.totalLabel}>{selectedSlots.length} Slot(s) Selected</Text>
-            <Text style={styles.totalAmount}>₹{getTotalAmount()}</Text>
+          <View style={styles.footerInfo}>
+            <Text style={styles.footerLabel}>{selectedSlots.length} Slot(s)</Text>
+            <Text style={styles.footerAmount}>₹{getTotalAmount()}</Text>
           </View>
-          <Button title="Book Now" onPress={handleBooking} loading={booking} style={styles.bookButton} />
+          <Button 
+            title="Confirm Booking" 
+            onPress={handleBooking} 
+            loading={booking} 
+            style={styles.bookButton} 
+          />
         </View>
       )}
     </SafeAreaView>
@@ -218,125 +269,225 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SIZES.lg,
-    gap: SIZES.md,
+    paddingTop: SIZES.lg,
+    paddingBottom: SIZES.xl,
+    paddingHorizontal: SIZES.xl,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
-  headerTitle: {
-    ...FONTS.h3,
-    color: COLORS.text,
-  },
-  dateCard: {
-    margin: SIZES.lg,
-  },
-  label: {
-    ...FONTS.caption,
-    color: COLORS.textSecondary,
-    marginBottom: SIZES.xs,
-  },
-  dateText: {
-    ...FONTS.body,
-    color: COLORS.text,
-  },
-  slotsContainer: {
-    padding: SIZES.lg,
-  },
-  sectionTitle: {
-    ...FONTS.h3,
-    color: COLORS.text,
-    marginBottom: SIZES.md,
-  },
-  noSlots: {
-    ...FONTS.body,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: SIZES.xl,
-  },
-  slotCard: {
-    marginBottom: SIZES.md,
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SIZES.md,
   },
-  selectedSlot: {
-    borderColor: COLORS.primary,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  turfName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  content: {
+    flex: 1,
+    padding: SIZES.xl,
+  },
+  dateSection: {
+    marginBottom: SIZES.xl,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: SIZES.md,
+  },
+  dateButtons: {
+    flexDirection: 'row',
+    gap: SIZES.md,
+  },
+  dateButton: {
+    flex: 1,
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
+    borderRadius: SIZES.radiusMd,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
     borderWidth: 2,
-    backgroundColor: '#E0F2FE',
+    borderColor: COLORS.border,
+    ...SHADOWS.small,
   },
-  unavailableSlot: {
-    opacity: 0.5,
-    backgroundColor: '#f5f5f5',
+  dateButtonActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
-  bookedOnlineSlot: {
-    backgroundColor: '#DBEAFE',
-    opacity: 0.7,
+  dateButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
   },
-  bookedOfflineSlot: {
-    backgroundColor: '#FED7AA',
-    opacity: 0.7,
+  dateButtonTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
-  blockedSlot: {
-    backgroundColor: '#E5E7EB',
-    opacity: 0.7,
+  slotsSection: {
+    marginBottom: SIZES.xl,
+  },
+  loadingContainer: {
+    paddingVertical: SIZES.xxl,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    backgroundColor: COLORS.card,
+    padding: SIZES.xxl,
+    borderRadius: SIZES.radiusLg,
+    alignItems: 'center',
+    ...SHADOWS.small,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    marginTop: SIZES.md,
+  },
+  slotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SIZES.md,
+  },
+  slotCard: {
+    width: '47.5%',
+    backgroundColor: COLORS.card,
+    padding: SIZES.lg,
+    borderRadius: SIZES.radiusMd,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    ...SHADOWS.small,
+  },
+  slotCardSelected: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  slotCardBooked: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
   },
   slotTime: {
-    ...FONTS.body,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SIZES.sm,
+  },
+  slotTimeText: {
+    fontSize: 16,
+    fontWeight: '500',
     color: COLORS.text,
   },
-  slotPrice: {
-    ...FONTS.body,
-    fontWeight: '600',
+  slotTimeTextSelected: {
     color: COLORS.primary,
+    fontWeight: '600',
   },
-  slotStatus: {
-    ...FONTS.caption,
+  slotTimeTextBooked: {
+    color: COLORS.textLight,
+  },
+  slotPrice: {
+    fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  slotPriceSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  bookedInfo: {
+    alignItems: 'flex-end',
+  },
+  bookedBadge: {
+    fontSize: 9,
+    color: '#991B1B',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  bookedBy: {
+    fontSize: 9,
+    color: '#DC2626',
+    marginTop: 2,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.card,
+    padding: SIZES.xl,
+    borderRadius: SIZES.radiusLg,
+    marginBottom: SIZES.xl,
+    ...SHADOWS.medium,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SIZES.lg,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SIZES.md,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  summaryTotal: {
+    paddingTop: SIZES.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: SIZES.sm,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: SIZES.lg,
+    gap: SIZES.lg,
+    padding: SIZES.xl,
+    backgroundColor: COLORS.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    ...SHADOWS.large,
   },
-  totalLabel: {
-    ...FONTS.caption,
+  footerInfo: {
+    flex: 1,
+  },
+  footerLabel: {
+    fontSize: 14,
     color: COLORS.textSecondary,
+    marginBottom: 2,
   },
-  totalAmount: {
-    ...FONTS.h3,
+  footerAmount: {
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text,
   },
   bookButton: {
     flex: 1,
-    marginLeft: SIZES.lg,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  datePickerModal: {
-    backgroundColor: COLORS.background,
-    borderRadius: SIZES.radiusLg,
-    padding: SIZES.lg,
-    width: '80%',
-  },
-  modalTitle: {
-    ...FONTS.h3,
-    color: COLORS.text,
-    marginBottom: SIZES.md,
-  },
-  dateOption: {
-    padding: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  dateOptionText: {
-    ...FONTS.body,
-    color: COLORS.text,
   },
 });

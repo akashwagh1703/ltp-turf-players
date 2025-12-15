@@ -13,10 +13,25 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ltp.player"
+      "bundleIdentifier": "com.ltp.player",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to show nearby turfs"
+      }
     },
     "android": {
-      "package": "com.ltp.player"
-    }
+      "package": "com.ltp.player",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow LTP Player to use your location to find nearby turfs."
+        }
+      ]
+    ]
   }
 }
