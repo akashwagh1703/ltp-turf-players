@@ -109,8 +109,42 @@ export default function BookTurfScreen({ route, navigation }) {
         { text: 'OK', onPress: () => navigation.navigate('Main', { screen: 'Bookings' }) }
       ]);
     } catch (error) {
-      console.error('Booking error:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to create booking');
+      // Log for debugging only (not shown to user)
+      if (__DEV__) {
+        console.log('Booking error:', error.response?.status, error.response?.data);
+      }
+      
+      // Reload slots to refresh availability
+      await loadSlots();
+      
+      // Determine user-friendly error message
+      let errorTitle = 'Booking Failed';
+      let errorMessage = 'Unable to create booking. Please try again.';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 400) {
+          if (data.message?.includes('not available') || data.message?.includes('already')) {
+            errorMessage = 'Selected time slots are no longer available. Please choose different slots.';
+          } else if (data.errors) {
+            errorMessage = 'Please check all booking details and try again.';
+          } else {
+            errorMessage = 'Selected slots are unavailable. Please select again.';
+          }
+        } else if (status === 422) {
+          errorMessage = 'Invalid booking information. Please check all fields.';
+        } else if (status === 500) {
+          errorMessage = 'Server error. Please try again in a moment.';
+        } else if (status === 401 || status === 403) {
+          errorMessage = 'Session expired. Please login again.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      
+      Alert.alert(errorTitle, errorMessage, [{ text: 'OK' }]);
     } finally {
       setBooking(false);
     }

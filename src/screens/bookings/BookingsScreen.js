@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,12 +28,32 @@ export default function BookingsScreen() {
     }
   };
 
-  const handleCancel = async (id) => {
+  const handleCancel = (booking) => {
+    Alert.alert(
+      'Cancel Booking',
+      `Are you sure you want to cancel this booking?\n\nBooking: #${booking.booking_number}\nTurf: ${booking.turf?.name}\nDate: ${booking.booking_date}\n\n⚠️ Cancellation Policy:\n• Free cancellation 24h before\n• Refund in 5-7 business days`,
+      [
+        { text: 'No, Keep It', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel', 
+          style: 'destructive',
+          onPress: () => confirmCancel(booking.id)
+        }
+      ]
+    );
+  };
+
+  const confirmCancel = async (id) => {
+    setLoading(true);
     try {
       await bookingService.cancelBooking(id);
+      Alert.alert('Success', 'Booking cancelled successfully');
       loadBookings();
     } catch (error) {
       console.error('Cancel booking error:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to cancel booking');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,14 +62,19 @@ export default function BookingsScreen() {
       case 'confirmed': return { bg: '#E0E7FF', text: '#4338CA' };
       case 'completed': return { bg: '#D1FAE5', text: '#047857' };
       case 'cancelled': return { bg: '#FEE2E2', text: '#DC2626' };
+      case 'no_show': return { bg: '#FEF3C7', text: '#92400E' };
       default: return { bg: '#F1F5F9', text: '#64748B' };
     }
   };
 
   const renderBooking = ({ item }) => {
-    const statusColor = getStatusColor(item.booking_status);
+    const statusColor = getStatusColor(item.status);
     return (
-      <View style={styles.bookingCard}>
+      <TouchableOpacity 
+        style={styles.bookingCard}
+        onPress={() => showBookingDetails(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.bookingHeader}>
           <View style={styles.bookingIconCircle}>
             <Ionicons name="football" size={20} color={COLORS.primary} />
@@ -59,7 +84,9 @@ export default function BookingsScreen() {
             <Text style={styles.bookingId}>#{item.booking_number || item.id}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
-            <Text style={[styles.statusText, { color: statusColor.text }]}>{item.booking_status}</Text>
+            <Text style={[styles.statusText, { color: statusColor.text }]}>
+              {item.status === 'no_show' ? 'No Show' : item.status}
+            </Text>
           </View>
         </View>
 
@@ -80,17 +107,32 @@ export default function BookingsScreen() {
           </View>
         </View>
 
-        {item.booking_status === 'confirmed' && (
+        {item.status === 'confirmed' && (
           <View style={styles.bookingFooter}>
             <Button
               title="Cancel Booking"
               variant="secondary"
-              onPress={() => handleCancel(item.id)}
+              onPress={() => handleCancel(item)}
               style={styles.cancelButton}
             />
           </View>
         )}
-      </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const showBookingDetails = (booking) => {
+    const statusColor = getStatusColor(booking.status);
+    const statusText = booking.status === 'no_show' ? 'No Show' : booking.status;
+    Alert.alert(
+      `Booking #${booking.booking_number}`,
+      `Turf: ${booking.turf?.name}\nDate: ${booking.booking_date}\nTime: ${booking.start_time} - ${booking.end_time}\nAmount: ₹${booking.final_amount || booking.amount}\nStatus: ${statusText}\nPayment: ${booking.payment_status}`,
+      booking.status === 'confirmed' ? [
+        { text: 'Close', style: 'cancel' },
+        { text: 'Cancel Booking', style: 'destructive', onPress: () => handleCancel(booking) }
+      ] : [
+        { text: 'Close', style: 'cancel' }
+      ]
     );
   };
 
