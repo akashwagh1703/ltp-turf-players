@@ -1,8 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../constants/config';
 
 const api = axios.create({
-  baseURL: 'https://cidcomitra.com/ltp-apis/public/api/v1/player',
+  baseURL: `${BASE_URL}/api/v1/player`,
   headers: {
     'Content-Type': 'application/json',
   },

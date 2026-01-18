@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../constants/theme';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -17,12 +17,12 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6' },
-    { icon: 'star-outline', label: 'My Reviews', color: '#F59E0B' },
-    { icon: 'notifications-outline', label: 'Notifications', color: '#8B5CF6' },
-    { icon: 'help-circle-outline', label: 'Help & Support', color: '#10B981' },
-    { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#64748B' },
-    { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: '#64748B' },
+    { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6', screen: 'EditProfile' },
+    { icon: 'star-outline', label: 'My Reviews', color: '#F59E0B', screen: 'MyReviews' },
+    { icon: 'notifications-outline', label: 'Notifications', color: '#8B5CF6', screen: 'Notifications' },
+    { icon: 'help-circle-outline', label: 'Help & Support', color: '#10B981', screen: 'HelpSupport' },
+    { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#64748B', screen: 'TermsConditions' },
+    { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: '#64748B', screen: 'PrivacyPolicy' },
   ];
 
   return (
@@ -46,6 +46,7 @@ export default function ProfileScreen() {
                   styles.menuItem,
                   index !== menuItems.length - 1 && styles.menuItemBorder
                 ]}
+                onPress={() => navigation.navigate(item.screen)}
                 activeOpacity={0.7}
               >
                 <View style={[styles.menuIconCircle, { backgroundColor: `${item.color}15` }]}>

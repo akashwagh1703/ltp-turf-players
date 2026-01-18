@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "927120080296",
+    "project_id": "playltp",
+    "storage_bucket": "playltp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927120080296:android:54ed709dc4565d4d22f19d",
+        "android_client_info": {
+          "package_name": "com.playltp.ltpplayers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4fRhb8kF6W5UL5r1IwsQ3K0rBMvPyKUI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927120080296:android:e7458b8fc0eb9f0d22f19d",
+        "android_client_info": {
+          "package_name": "com.playltp.ltpturfowner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4fRhb8kF6W5UL5r1IwsQ3K0rBMvPyKUI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

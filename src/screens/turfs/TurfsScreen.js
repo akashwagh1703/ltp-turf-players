@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,31 +64,42 @@ export default function TurfsScreen({ navigation, route }) {
             <Text style={styles.featuredText}>FEATURED</Text>
           </View>
         )}
-        <View style={styles.turfIconCircle}>
-          <Ionicons name="football" size={28} color={COLORS.primary} />
+        
+        <View style={styles.turfImageContainer}>
+          {item.images && item.images.length > 0 ? (
+            <Image 
+              source={{ uri: item.images[0].image_url }} 
+              style={styles.turfImage}
+              defaultSource={require('../../../assets/icon.png')}
+            />
+          ) : (
+            <LinearGradient colors={['#10B981', '#34D399']} style={styles.turfImagePlaceholder}>
+              <Ionicons name="football" size={32} color="white" />
+            </LinearGradient>
+          )}
+          <View style={styles.ratingBadge}>
+            <Ionicons name="star" size={10} color="#FFD700" />
+            <Text style={styles.ratingText}>4.8</Text>
+          </View>
         </View>
+        
         <View style={styles.turfContent}>
-          <Text style={styles.turfName}>{item.name}</Text>
+          <Text style={styles.turfName} numberOfLines={2}>{item.name}</Text>
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
-            <Text style={styles.turfLocation}>
-              {item.city}, {item.state}
-              {item.distance && ` • ${item.distance} km`}
+            <Text style={styles.turfLocation} numberOfLines={1}>
+              {item.city || 'Location'}{item.distance ? ` • ${item.distance}km` : ''}
             </Text>
           </View>
           <View style={styles.turfFooter}>
             <View style={styles.sportBadge}>
-              <Text style={styles.sportBadgeText}>{item.sport_type}</Text>
+              <Text style={styles.sportBadgeText}>{item.sport_type || 'Football'}</Text>
             </View>
-            <View style={styles.sizeInfo}>
-              <Ionicons name="resize-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.sizeText}>{item.size}</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.turfPrice}>₹{item.uniform_price || '500'}</Text>
+              <Text style={styles.priceLabel}>/hr</Text>
             </View>
           </View>
-        </View>
-        <View style={styles.priceContainer}>
-          <Text style={styles.turfPrice}>₹{item.uniform_price || 'Dynamic'}</Text>
-          <Text style={styles.priceLabel}>/hr</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -151,13 +162,10 @@ const styles = StyleSheet.create({
   turfCard: {
     backgroundColor: COLORS.card,
     borderRadius: SIZES.radiusLg,
-    padding: SIZES.lg,
     marginBottom: SIZES.lg,
-    flexDirection: 'row',
-    gap: SIZES.md,
+    overflow: 'hidden',
     ...SHADOWS.medium,
     position: 'relative',
-    overflow: 'hidden',
   },
   featuredCard: {
     borderWidth: 2,
@@ -166,117 +174,96 @@ const styles = StyleSheet.create({
   },
   featuredBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: 12,
+    right: 12,
     backgroundColor: '#FFD700',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderBottomLeftRadius: 12,
+    borderRadius: 8,
     zIndex: 10,
   },
   featuredText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#FFF',
     letterSpacing: 0.5,
   },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#10B981',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderBottomLeftRadius: 12,
-    zIndex: 10,
+  turfImageContainer: {
+    width: '100%',
+    height: 160,
+    position: 'relative',
   },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 0.5,
+  turfImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  newBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#F59E0B',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderBottomLeftRadius: 12,
-    zIndex: 10,
-  },
-  newText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 0.5,
-  },
-  turfIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primaryLight,
+  turfImagePlaceholder: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  ratingBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  ratingText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'white',
+  },
   turfContent: {
-    flex: 1,
+    padding: SIZES.lg,
   },
   turfName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.text,
-    marginBottom: SIZES.xs,
+    marginBottom: SIZES.sm,
+    lineHeight: 22,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: SIZES.sm,
+    marginBottom: SIZES.md,
   },
   turfLocation: {
     fontSize: 14,
     color: COLORS.textSecondary,
+    flex: 1,
   },
   turfFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: SIZES.md,
   },
   sportBadge: {
-    backgroundColor: COLORS.infoLight,
-    paddingHorizontal: SIZES.sm,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   sportBadgeText: {
-    fontSize: 10,
-    color: COLORS.secondary,
+    fontSize: 11,
+    color: COLORS.primary,
     textTransform: 'capitalize',
-    fontWeight: '600',
-  },
-  sizeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  sizeText: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
+    fontWeight: '700',
   },
   priceContainer: {
     alignItems: 'flex-end',
-    justifyContent: 'center',
   },
   turfPrice: {
     fontSize: 18,
@@ -284,8 +271,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   priceLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,

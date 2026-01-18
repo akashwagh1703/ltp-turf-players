@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,60 +55,74 @@ export default function LoginScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <LinearGradient
-            colors={['#10B981', '#059669']}
-            style={styles.header}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.logoCircle}>
-              <Ionicons name="football" size={50} color="#10B981" />
+          {/* Header Section */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image source={require('../../../assets/icon.png')} style={styles.logoImage} />
             </View>
-            <Text style={styles.title}>Let's Turf Play</Text>
-            <Text style={styles.subtitle}>Book your favorite turf in seconds</Text>
-          </LinearGradient>
+            <Text style={styles.appName}>LTP Player</Text>
+            <Text style={styles.brandTagline}>Let's Turf Play</Text>
+            <Text style={styles.subtitle}>Book premium turfs instantly</Text>
+          </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Welcome Back! 👋</Text>
-            <Text style={styles.formSubtitle}>Login to continue booking</Text>
+          {/* Login Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.welcomeSection}>
+              <Text style={styles.welcomeTitle}>Welcome Back</Text>
+              <Text style={styles.welcomeSubtitle}>Enter your phone number to continue</Text>
+            </View>
 
-            <Input
-              label="Phone Number"
-              placeholder="Enter 10-digit phone"
-              keyboardType="phone-pad"
-              maxLength={10}
-              value={phone}
-              onChangeText={setPhone}
-              editable={!otpSent}
-            />
-
-            {otpSent && (
-              <>
+            <View style={styles.inputSection}>
+              <View style={styles.phoneInputContainer}>
+                <Text style={styles.countryCode}>+91</Text>
                 <Input
-                  label="OTP"
-                  placeholder="Enter 6-digit OTP"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  value={otp}
-                  onChangeText={setOtp}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={phone}
+                  onChangeText={setPhone}
+                  editable={!otpSent}
+                  style={styles.phoneInput}
                 />
-                <Text style={styles.otpHint}>💡 Default OTP: 999999</Text>
-              </>
-            )}
+              </View>
 
-            {!otpSent ? (
-              <Button title="Send OTP" onPress={handleSendOtp} loading={loading} />
-            ) : (
-              <>
-                <Button title="Verify & Login" onPress={handleVerifyOtp} loading={loading} />
-                <Button
-                  title="Resend OTP"
-                  variant="secondary"
-                  onPress={handleSendOtp}
-                  style={{ marginTop: SIZES.md }}
-                />
-              </>
-            )}
+              {otpSent && (
+                <>
+                  <Input
+                    label="Verification Code"
+                    placeholder="Enter 6-digit OTP"
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={setOtp}
+                  />
+                  <View style={styles.otpInfo}>
+                    <Text style={styles.otpNote}>Code sent to +91 {phone}</Text>
+                    <Text style={styles.otpTimer}>Expires in 2:00</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            <View style={styles.buttonSection}>
+              {!otpSent ? (
+                <Button title="Send Verification Code" onPress={handleSendOtp} loading={loading} />
+              ) : (
+                <>
+                  <Button title="Verify & Continue" onPress={handleVerifyOtp} loading={loading} />
+                  <Button
+                    title="Resend Code"
+                    variant="secondary"
+                    onPress={handleSendOtp}
+                    style={styles.resendButton}
+                  />
+                </>
+              )}
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>By continuing, you agree to our Terms & Privacy Policy</Text>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -119,7 +133,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
   },
   keyboardView: {
     flex: 1,
@@ -128,54 +142,133 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: SIZES.xxl * 2,
-    paddingBottom: SIZES.xxl,
-    paddingHorizontal: SIZES.xl,
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingTop: 80,
+    paddingBottom: 50,
+    backgroundColor: '#F8FAFC',
   },
-  logoCircle: {
+  logoContainer: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: 25,
     backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.lg,
+    marginBottom: 24,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: SIZES.xs,
+  logoImage: {
+    width: 65,
+    height: 65,
+    resizeMode: 'contain',
+  },
+  appName: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  brandTagline: {
+    fontSize: 18,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
-  formCard: {
-    backgroundColor: COLORS.card,
-    margin: SIZES.xl,
-    padding: SIZES.xl,
-    borderRadius: SIZES.radiusLg,
+  formContainer: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 15,
   },
-  formTitle: {
-    fontSize: 24,
+  welcomeSection: {
+    marginBottom: 36,
+  },
+  welcomeTitle: {
+    fontSize: 32,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: SIZES.xs,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
-  formSubtitle: {
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  inputSection: {
+    marginBottom: 36,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  countryCode: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    borderRadius: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  otpInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  otpNote: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: SIZES.xl,
+    fontWeight: '500',
   },
-  otpHint: {
+  otpTimer: {
     fontSize: 14,
-    color: '#F59E0B',
-    marginTop: -SIZES.sm,
-    marginBottom: SIZES.md,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  buttonSection: {
+    gap: 16,
+    marginBottom: 32,
+  },
+  resendButton: {
+    marginTop: 0,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  footerText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

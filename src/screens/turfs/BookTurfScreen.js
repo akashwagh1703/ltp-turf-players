@@ -45,13 +45,25 @@ export default function BookTurfScreen({ route, navigation }) {
         }
       }
       
-      const processedSlots = slotsData.map(slot => ({
-        ...slot,
-        is_booked: slot.is_booked || 
-                   slot.status === 'booked_online' || 
-                   slot.status === 'booked_offline' ||
-                   (slot.booking && ['confirmed', 'completed'].includes(slot.booking.booking_status))
-      }));
+      // Filter slots based on current time if today
+      const now = new Date();
+      const isToday = formatDate(date) === formatDate(now);
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+      
+      const processedSlots = slotsData
+        .filter(slot => {
+          // If not today, show all slots
+          if (!isToday) return true;
+          // If today, only show slots that haven't started yet
+          return slot.start_time > currentTime;
+        })
+        .map(slot => ({
+          ...slot,
+          is_booked: slot.is_booked || 
+                     slot.status === 'booked_online' || 
+                     slot.status === 'booked_offline' ||
+                     (slot.booking && ['confirmed', 'completed'].includes(slot.booking.booking_status))
+        }));
       
       processedSlots.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
       setSlots(processedSlots);
@@ -154,7 +166,17 @@ export default function BookTurfScreen({ route, navigation }) {
     { label: 'Today', days: 0 },
     { label: 'Tomorrow', days: 1 },
     { label: 'Day After', days: 2 },
+    { label: formatDateLabel(3), days: 3 },
+    { label: formatDateLabel(4), days: 4 },
   ];
+
+  function formatDateLabel(daysAhead) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    const day = d.getDate();
+    const month = d.toLocaleString('default', { month: 'short' });
+    return `${day} ${month}`;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -172,26 +194,24 @@ export default function BookTurfScreen({ route, navigation }) {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.dateSection}>
           <Text style={styles.sectionLabel}>Select Date</Text>
-          <View style={styles.dateButtons}>
-            {dateOptions.map((option) => (
-              <TouchableOpacity
-                key={option.days}
-                style={[
-                  styles.dateButton,
-                  date.toDateString() === new Date(Date.now() + option.days * 86400000).toDateString() && styles.dateButtonActive
-                ]}
-                onPress={() => handleDateSelect(option.days)}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.dateButtonText,
-                  date.toDateString() === new Date(Date.now() + option.days * 86400000).toDateString() && styles.dateButtonTextActive
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScrollContent}>
+            {dateOptions.map((option) => {
+              const optionDate = new Date(Date.now() + option.days * 86400000);
+              const isSelected = date.toDateString() === optionDate.toDateString();
+              return (
+                <TouchableOpacity
+                  key={option.days}
+                  style={[styles.dateChip, isSelected && styles.dateChipActive]}
+                  onPress={() => handleDateSelect(option.days)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.dateChipText, isSelected && styles.dateChipTextActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         <View style={styles.slotsSection}>
@@ -342,36 +362,35 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.text,
     marginBottom: SIZES.md,
   },
-  dateButtons: {
-    flexDirection: 'row',
-    gap: SIZES.md,
+  dateScrollContent: {
+    paddingRight: SIZES.lg,
   },
-  dateButton: {
-    flex: 1,
+  dateChip: {
     paddingVertical: SIZES.md,
-    paddingHorizontal: SIZES.lg,
-    borderRadius: SIZES.radiusMd,
+    paddingHorizontal: SIZES.xl,
+    borderRadius: 20,
     backgroundColor: COLORS.card,
-    alignItems: 'center',
+    marginRight: SIZES.md,
     borderWidth: 2,
     borderColor: COLORS.border,
-    ...SHADOWS.small,
+    minWidth: 90,
+    alignItems: 'center',
   },
-  dateButtonActive: {
-    backgroundColor: COLORS.primaryLight,
+  dateChipActive: {
+    backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  dateButtonText: {
-    fontSize: 16,
+  dateChipText: {
+    fontSize: 14,
     fontWeight: '500',
     color: COLORS.textSecondary,
   },
-  dateButtonTextActive: {
-    color: COLORS.primary,
+  dateChipTextActive: {
+    color: '#FFF',
     fontWeight: '600',
   },
   slotsSection: {

@@ -4,25 +4,38 @@
     "slug": "ltp-turf-players",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#3B82F6"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#10B981"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ltp.player",
+      "bundleIdentifier": "com.playltp.ltpplayers",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to show nearby turfs"
       }
     },
     "android": {
-      "package": "com.ltp.player",
+      "package": "com.playltp.ltpplayers",
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#10B981"
+      },
+      "usesCleartextTraffic": true,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -32,6 +45,15 @@
           "locationAlwaysAndWhenInUsePermission": "Allow LTP Player to use your location to find nearby turfs."
         }
       ]
-    ]
+    ],
+    "cli": {
+      "appVersionSource": "local"
+    },
+    "owner": "playltpv3",
+    "extra": {
+      "eas": {
+        "projectId": "d0fa55c0-2fb1-45d4-8112-ccc68346d7a0"
+      }
+    }
   }
 }

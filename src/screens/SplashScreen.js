@@ -1,25 +1,33 @@
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, FONTS } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 
-export default function SplashScreen() {
+const { width, height } = Dimensions.get('window');
+
+export default function SplashScreen({ onFinish }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onFinish();
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <LinearGradient
-      colors={['#10B981', '#059669', '#047857']}
+      colors={['#10B981', '#059669']}
       style={styles.container}
     >
-      <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="football" size={60} color="#FFF" />
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/icon.png')} 
+            style={styles.logo}
+          />
         </View>
-        <Text style={styles.appName}>Let's Turf Play</Text>
-        <Text style={styles.tagline}>Book Your Game, Play Your Way</Text>
-      </View>
-      <View style={styles.footer}>
-        <ActivityIndicator size="large" color="#FFF" />
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.appName}>LTP</Text>
+        <Text style={styles.tagline}>Let's Turf Play</Text>
       </View>
     </LinearGradient>
   );
@@ -28,42 +36,35 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SIZES.xxl * 2,
-  },
-  logoContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoCircle: {
+  content: {
+    alignItems: 'center',
+  },
+  logoContainer: {
     width: 120,
     height: 120,
-    borderRadius: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.xl,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 24,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    resizeMode: 'contain',
   },
   appName: {
-    ...FONTS.h1,
-    color: '#FFF',
+    fontSize: 36,
     fontWeight: '700',
-    marginBottom: SIZES.sm,
+    color: '#FFF',
+    marginBottom: 8,
   },
   tagline: {
-    ...FONTS.body,
+    fontSize: 18,
     color: 'rgba(255,255,255,0.9)',
-  },
-  footer: {
-    alignItems: 'center',
-  },
-  version: {
-    ...FONTS.caption,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: SIZES.md,
+    fontWeight: '500',
   },
 });

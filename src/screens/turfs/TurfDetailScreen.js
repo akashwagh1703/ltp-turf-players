@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,9 @@ export default function TurfDetailScreen({ route, navigation }) {
   const { id } = route.params;
   const [turf, setTurf] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     loadTurf();
@@ -54,47 +57,100 @@ export default function TurfDetailScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#10B981', '#059669']} style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-      </LinearGradient>
-
+        <Text style={styles.headerTitle}>{turf?.name || 'Turf Details'}</Text>
+        <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)} style={styles.favoriteButton}>
+          <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={24} color={isFavorite ? "#FF6B6B" : COLORS.text} />
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Enhanced Image Gallery */}
         {turf.images && turf.images.length > 0 ? (
-          <ScrollView 
-            horizontal 
-            pagingEnabled 
-            showsHorizontalScrollIndicator={false}
-            style={styles.imageSlider}
-          >
-            {turf.images.map((img, index) => (
-              <Image 
-                key={index}
-                source={{ uri: img.image_url }} 
-                style={styles.turfImage}
-                resizeMode="cover"
-              />
-            ))}
-          </ScrollView>
+          <View style={styles.imageContainer}>
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setCurrentImageIndex(index);
+              }}
+              style={styles.imageSlider}
+            >
+              {turf.images.map((img, index) => (
+                <TouchableOpacity key={index} onPress={() => setShowImageModal(true)} activeOpacity={0.9}>
+                  <Image 
+                    source={{ uri: img.image_url }} 
+                    style={styles.turfImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            
+            {/* Image Indicators */}
+            <View style={styles.imageIndicators}>
+              {turf.images.map((_, index) => (
+                <View 
+                  key={index} 
+                  style={[styles.indicator, currentImageIndex === index && styles.activeIndicator]} 
+                />
+              ))}
+            </View>
+            
+            {/* Image Counter */}
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>{currentImageIndex + 1}/{turf.images.length}</Text>
+            </View>
+          </View>
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Ionicons name="football" size={60} color={COLORS.primary} />
+            <LinearGradient colors={['#10B981', '#34D399']} style={styles.placeholderGradient}>
+              <Ionicons name="football" size={60} color="white" />
+            </LinearGradient>
           </View>
         )}
 
+        {/* Enhanced Header Info with Rating */}
         <View style={styles.content}>
           <View style={styles.headerInfo}>
-            <View style={styles.titleRow}>
-              <Text style={styles.name}>{turf.name}</Text>
-              <View style={styles.sportBadge}>
-                <Text style={styles.sportBadgeText}>{turf.sport_type}</Text>
+            <View style={styles.titleSection}>
+              <View style={styles.titleRow}>
+                <Text style={styles.name}>{turf.name}</Text>
+                {turf.is_featured && (
+                  <View style={styles.featuredBadge}>
+                    <Ionicons name="star" size={10} color="#FFF" />
+                    <Text style={styles.featuredText}>FEATURED</Text>
+                  </View>
+                )}
+              </View>
+              
+              <View style={styles.ratingRow}>
+                <View style={styles.sportBadge}>
+                  <Text style={styles.sportBadgeText}>{turf.sport_type}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.quickStats}>
+                <View style={styles.statItem}>
+                  <Ionicons name="location" size={14} color={COLORS.textSecondary} />
+                  <Text style={styles.statText}>2.5 km away</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Starting from</Text>
-              <Text style={styles.priceValue}>₹{turf.uniform_price || 'Dynamic'}/hr</Text>
-            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="navigate" size={20} color={COLORS.primary} />
+              <Text style={styles.actionText}>Directions</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.infoCard}>
@@ -144,21 +200,42 @@ export default function TurfDetailScreen({ route, navigation }) {
                 {amenities.map((amenity, index) => (
                   <View key={index} style={styles.amenityItem}>
                     <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
-                    <Text style={styles.amenityText}>{amenity}</Text>
+                    <Text style={styles.amenityText}>{amenity.amenity_name || amenity}</Text>
                   </View>
                 ))}
               </View>
             </View>
           )}
-
-          <View style={styles.bookButtonContainer}>
-            <Button 
-              title="Book Now" 
-              onPress={() => navigation.navigate('BookTurf', { turfId: turf.id, turfName: turf.name })} 
-            />
-          </View>
         </View>
+        
+        {/* Image Modal */}
+        <Modal visible={showImageModal} transparent animationType="fade">
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setShowImageModal(false)}>
+              <Ionicons name="close" size={30} color="#FFF" />
+            </TouchableOpacity>
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+              {turf?.images?.map((img, index) => (
+                <Image key={index} source={{ uri: img.image_url }} style={styles.modalImage} resizeMode="contain" />
+              ))}
+            </ScrollView>
+          </View>
+        </Modal>
       </ScrollView>
+      
+      {/* Sticky Bottom Bar */}
+      <View style={styles.stickyBottom}>
+        <View style={styles.bottomPrice}>
+          <Text style={styles.bottomPriceText}>₹{turf?.uniform_price || '500'}/hr</Text>
+          <Text style={styles.bottomAvailability}>Available Now</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.bookNowButton}
+          onPress={() => navigation.navigate('BookTurf', { turfId: turf?.id, turfName: turf?.name })}
+        >
+          <Text style={styles.bookNowText}>Book Now</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -168,26 +245,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: SIZES.md,
+  },
+  favoriteButton: {
+    padding: 8,
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingTop: SIZES.lg,
-    paddingBottom: SIZES.xl,
-    paddingHorizontal: SIZES.xl,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  imageContainer: {
+    position: 'relative',
   },
   imageSlider: {
     width: SCREEN_WIDTH,
@@ -197,10 +287,46 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     height: 250,
   },
+  imageIndicators: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  activeIndicator: {
+    backgroundColor: '#FFF',
+    width: 24,
+  },
+  imageCounter: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  imageCounterText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   imagePlaceholder: {
     width: SCREEN_WIDTH,
     height: 250,
-    backgroundColor: COLORS.primaryLight,
+  },
+  placeholderGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -210,44 +336,112 @@ const styles = StyleSheet.create({
   headerInfo: {
     marginBottom: SIZES.lg,
   },
+  titleSection: {
+    flex: 1,
+  },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SIZES.md,
+    alignItems: 'center',
+    marginBottom: SIZES.sm,
   },
   name: {
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.text,
     flex: 1,
-    marginRight: SIZES.md,
+    marginRight: SIZES.sm,
   },
-  sportBadge: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SIZES.md,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  sportBadgeText: {
-    fontSize: 10,
-    color: COLORS.primary,
-    textTransform: 'capitalize',
-    fontWeight: '600',
-  },
-  priceRow: {
+  featuredBadge: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: SIZES.sm,
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 3,
   },
-  priceLabel: {
+  featuredText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SIZES.sm,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  reviewCount: {
     fontSize: 14,
     color: COLORS.textSecondary,
   },
+  quickStats: {
+    flexDirection: 'row',
+    gap: SIZES.lg,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  priceSection: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: SIZES.sm,
+    alignSelf: 'flex-start',
+  },
+  priceLabel: {
+    fontSize: 10,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginBottom: 1,
+  },
   priceValue: {
-    fontSize: 24,
+    fontSize: 18,
     color: COLORS.primary,
     fontWeight: '700',
+  },
+  priceUnit: {
+    fontSize: 10,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginBottom: SIZES.lg,
+    ...SHADOWS.medium,
+  },
+  actionButton: {
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 16,
+  },
+  actionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   infoCard: {
     backgroundColor: COLORS.card,
@@ -339,5 +533,72 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     textAlign: 'center',
     marginTop: SIZES.xl,
+  },
+  sportBadge: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sportBadgeText: {
+    fontSize: 11,
+    color: COLORS.primary,
+    textTransform: 'capitalize',
+    fontWeight: '700',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 1001,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
+  },
+  stickyBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    paddingHorizontal: SIZES.xl,
+    paddingVertical: SIZES.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    ...SHADOWS.large,
+  },
+  bottomPrice: {
+    flex: 1,
+  },
+  bottomPriceText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  bottomAvailability: {
+    fontSize: 12,
+    color: COLORS.success,
+    fontWeight: '600',
+  },
+  bookNowButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  bookNowText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });

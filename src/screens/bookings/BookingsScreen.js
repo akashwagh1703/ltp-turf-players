@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +30,7 @@ export default function BookingsScreen() {
 
   const handleCancel = (booking) => {
     Alert.alert(
-      'Cancel Booking',
+      '⚠️ Cancel Booking',
       `Are you sure you want to cancel this booking?\n\nBooking: #${booking.booking_number}\nTurf: ${booking.turf?.name}\nDate: ${booking.booking_date}\n\n⚠️ Cancellation Policy:\n• Free cancellation 24h before\n• Refund in 5-7 business days`,
       [
         { text: 'No, Keep It', style: 'cancel' },
@@ -39,7 +39,8 @@ export default function BookingsScreen() {
           style: 'destructive',
           onPress: () => confirmCancel(booking.id)
         }
-      ]
+      ],
+      { cancelable: true }
     );
   };
 
@@ -73,14 +74,14 @@ export default function BookingsScreen() {
       <TouchableOpacity 
         style={styles.bookingCard}
         onPress={() => showBookingDetails(item)}
-        activeOpacity={0.7}
+        activeOpacity={0.9}
       >
         <View style={styles.bookingHeader}>
           <View style={styles.bookingIconCircle}>
-            <Ionicons name="football" size={20} color={COLORS.primary} />
+            <Ionicons name="football" size={24} color={COLORS.primary} />
           </View>
           <View style={styles.bookingHeaderContent}>
-            <Text style={styles.turfName}>{item.turf?.name || 'Turf'}</Text>
+            <Text style={styles.turfName} numberOfLines={2}>{item.turf?.name || 'Turf'}</Text>
             <Text style={styles.bookingId}>#{item.booking_number || item.id}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
@@ -92,31 +93,32 @@ export default function BookingsScreen() {
 
         <View style={styles.bookingDetails}>
           <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
+            <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
             <Text style={styles.detailText}>{item.booking_date}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
+            <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
             <Text style={styles.detailText}>
               {item.start_time} - {item.end_time}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="wallet-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>₹{item.final_amount || item.amount}</Text>
-          </View>
         </View>
-
-        {item.status === 'confirmed' && (
-          <View style={styles.bookingFooter}>
-            <Button
-              title="Cancel Booking"
-              variant="secondary"
-              onPress={() => handleCancel(item)}
-              style={styles.cancelButton}
-            />
+        
+        <View style={styles.bookingFooter}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.bookingPrice}>₹{item.final_amount || item.amount}</Text>
+            <Text style={styles.paymentStatus}>{item.payment_status || 'Paid'}</Text>
           </View>
-        )}
+          {item.status === 'confirmed' && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => handleCancel(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -200,13 +202,13 @@ const styles = StyleSheet.create({
   bookingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SIZES.lg,
+    marginBottom: SIZES.md,
     gap: SIZES.md,
   },
   bookingIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
@@ -215,24 +217,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   turfName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   bookingId: {
-    fontSize: 10,
+    fontSize: 12,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: SIZES.md,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   statusText: {
     fontSize: 10,
     textTransform: 'capitalize',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   bookingDetails: {
     gap: SIZES.sm,
@@ -245,15 +249,40 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 14,
-    color: COLORS.text,
+    color: COLORS.textSecondary,
   },
   bookingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: SIZES.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  priceContainer: {
+    flex: 1,
+  },
+  bookingPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
+  paymentStatus: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textTransform: 'capitalize',
+  },
   cancelButton: {
-    paddingVertical: SIZES.sm,
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFF',
   },
   emptyContainer: {
     flex: 1,
